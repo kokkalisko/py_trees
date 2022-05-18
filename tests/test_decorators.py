@@ -25,6 +25,7 @@ logger = py_trees.logging.Logger("Nosetest")
 # Classes
 ##############################################################################
 
+
 class InvalidSetup(py_trees.behaviour.Behaviour):
     def setup(self, timeout):
         # A common mistake is to forget to return a boolean value
@@ -33,6 +34,7 @@ class InvalidSetup(py_trees.behaviour.Behaviour):
         # to do so.
         pass
 
+
 class DummyDecorator(py_trees.decorators.Decorator):
     def __init__(self, child, name=py_trees.common.Name.AUTO_GENERATED):
         super(DummyDecorator, self).__init__(name=name, child=child)
@@ -40,6 +42,7 @@ class DummyDecorator(py_trees.decorators.Decorator):
 ##############################################################################
 # Tests
 ##############################################################################
+
 
 def test_set_name():
     print(console.bold + "\n****************************************************************************************" + console.reset)
@@ -54,6 +57,16 @@ def test_set_name():
     print("no_named_decorator.name == DummyDecorator\\n[Woohoo]")
     assert(no_named_decorator.name == "DummyDecorator\n[Woohoo]")
 
+
+def test_invalid_no_name_and_child_provided():
+    print(console.bold + "\n****************************************************************************************" + console.reset)
+    print(console.bold + "* No name and child provided" + console.reset)
+    print(console.bold + "****************************************************************************************\n" + console.reset)
+    print("\n--------- Assertions ---------\n")
+    print("TypeError is raised")
+    assert_raises(TypeError, DummyDecorator.__init__)
+
+
 def test_invalid_child():
     print(console.bold + "\n****************************************************************************************" + console.reset)
     print(console.bold + "* Invalid Child" + console.reset)
@@ -61,6 +74,7 @@ def test_invalid_child():
     print("\n--------- Assertions ---------\n")
     print("TypeError is raised")
     assert_raises(TypeError, DummyDecorator.__init__, child=5)
+
 
 def test_invalid_setup():
     print(console.bold + "\n****************************************************************************************" + console.reset)
@@ -77,6 +91,22 @@ def test_invalid_setup():
     print("TypeError has message with substring 'NoneType'")
     assert("NoneType" in str(context.exception))
 
+def test_decorator_multiple_children():
+    print(console.bold + "\n****************************************************************************************" + console.reset)
+    print(console.bold + "* Multiple children " + console.reset)
+    print(console.bold + "****************************************************************************************\n" + console.reset)
+    parent = py_trees.decorators.Decorator(
+        name="Decorator",
+    )
+    parent.add_child(py_trees.behaviours.Failure())
+    print("\n--------- Assertions ---------\n")
+    print("RuntimeError is raised")
+    with assert_raises(RuntimeError) as context:
+        parent.add_child(py_trees.behaviours.Success())
+    print("RuntimeError has message with a specific substring")
+    assert("There is already a child given to the decorator" 
+            in str(context.exception))
+
 def test_failure_is_success_tree():
     print(console.bold + "\n****************************************************************************************" + console.reset)
     print(console.bold + "* Failure is Success Tree" + console.reset)
@@ -91,6 +121,30 @@ def test_failure_is_success_tree():
     py_trees.display.print_ascii_tree(root)
     visitor = py_trees.visitors.DebugVisitor()
     py_trees.tests.tick_tree(root, 1, 1, visitor, print_snapshot=True)
+
+    print("\n--------- Assertions ---------\n")
+    print("root.status == py_trees.common.Status.SUCCESS")
+    assert(root.status == py_trees.common.Status.SUCCESS)
+    print("failure.status == py_trees.common.Status.FAILURE")
+    assert(failure.status == py_trees.common.Status.FAILURE)
+    print("failure_is_success.status == py_trees.common.Status.SUCCESS")
+    assert(failure_is_success.status == py_trees.common.Status.SUCCESS)
+
+def test_failure_is_success_tree_with_add_child():
+    print(console.bold + "\n****************************************************************************************" + console.reset)
+    print(console.bold + "* Failure is Success Tree With add_child" + console.reset)
+    print(console.bold + "****************************************************************************************\n" + console.reset)
+    root = py_trees.composites.Selector(name="Root")
+    failure = py_trees.behaviours.Failure(name="Failure")
+    failure_is_success = py_trees.decorators.FailureIsSuccess(
+        name="Failure Is Success"
+    )
+    failure_is_success.add_child(py_trees.behaviours.Failure())
+    root.add_child(failure)
+    root.add_child(failure_is_success)
+    py_trees.display.print_ascii_tree(root)
+    visitor = py_trees.visitors.DebugVisitor()
+    py_trees.tests.tick_tree(root, 1, 1, visitor, print_snapshot=True)
  
     print("\n--------- Assertions ---------\n")
     print("root.status == py_trees.common.Status.SUCCESS")
@@ -99,7 +153,6 @@ def test_failure_is_success_tree():
     assert(failure.status == py_trees.common.Status.FAILURE)
     print("failure_is_success.status == py_trees.common.Status.SUCCESS")
     assert(failure_is_success.status == py_trees.common.Status.SUCCESS)
- 
  
 def test_success_is_failure_tree():
     print(console.bold + "\n****************************************************************************************" + console.reset)

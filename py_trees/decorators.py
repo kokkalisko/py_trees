@@ -63,30 +63,52 @@ class Decorator(behaviour.Behaviour):
     A decorator is responsible for handling the lifecycle of a single
     child beneath
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+    def __init__(self, child = None, name=common.Name.AUTO_GENERATED):
         """
-        Common initialisation steps for a decorator - type checks and
-        name construction (if None is given).
+        Common initialisation steps for a decorator
         
         Args:
             name (:obj:`str`): the decorator name (can be None)
             child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
+        """
+
+        # Check if one of the name or child arguments has been provided
+        if (not child and not name) or (not child and name == common.Name.AUTO_GENERATED):
+            raise TypeError("A name for the behavior node or a child should be provided")
+
+        # Set the name of the decorator
+        if (child and not name) or (child and name == common.Name.AUTO_GENERATED):
+                name = self.__class__.__name__ + "\n[{}]".format(child.name)
+
+        # Initialise
+        super(Decorator, self).__init__(name=name)
+
+        # If a child node is given as an argument, then it should be decorated
+        if child:
+            self.add_child(child)
+ 
+    def add_child(self, child):
+        '''
+        Add the child to be decorated and perform a type check and a check to ensure it is 
+        the first child given.
+
+        Args:
+            child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
         Raises:
             TypeError: if the child is not an instance of :class:`~py_trees.behaviour.Behaviour`
-        """
+            RuntimeError: if the decorator has already a child
+        '''
         # Checks
         if not isinstance(child, behaviour.Behaviour):
             raise TypeError("A decorator's child must be an instance of py_trees.behaviours.Behaviour")
-        # Construct an informative name if none is provided 
-        if not name or name == common.Name.AUTO_GENERATED:
-            name = self.__class__.__name__ + "\n[{}]".format(child.name)
-        # Initialise
-        super(Decorator, self).__init__(name=name)
+        if len(self.children):
+            raise RuntimeError("There is already a child given to the decorator")
+
         child.parent = self
         self.children.append(child)
         # Give a convenient alias
         self.decorated = self.children[0]
- 
+        
     def setup(self, timeout):
         """
         Relays to the decorated child's :meth:`~py_trees.behaviour.Behaviour.setup`
@@ -163,7 +185,7 @@ class Timeout(Decorator):
     as that of it's encapsulated behaviour.
     """
     def __init__(self,
-                 child,
+                 child = None,
                  name=common.Name.AUTO_GENERATED,
                  duration=5.0):
         """
@@ -213,7 +235,7 @@ class OneShot(Decorator):
     
     .. seealso:: :meth:`py_trees.idioms.oneshot`
     """
-    def __init__(self, child,
+    def __init__(self, child = None,
                  name=common.Name.AUTO_GENERATED):
         """
         Init with the decorated child.
@@ -265,7 +287,7 @@ class Inverter(Decorator):
     """
     A decorator that inverts the result of a class's update function.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+    def __init__(self, child = None, name=common.Name.AUTO_GENERATED):
         """
         Init with the decorated child.
                 
@@ -414,7 +436,7 @@ class Condition(Decorator):
     :data:`~py_trees.common.Status.SUCCESS` when the flip occurs.
     """
     def __init__(self, 
-                 child,
+                 child = None,
                  name=common.Name.AUTO_GENERATED, 
                  status=common.Status.SUCCESS):
         """
